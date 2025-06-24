@@ -1,28 +1,33 @@
 <?php
-header("Content-Type: text/plain");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Content-Type: application/json");
 
-// Validasi request method
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+// Tangani preflight request
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// Pastikan hanya menerima POST
+if ($_SERVER['REQUEST_METHOD'] != 'POST') {
     http_response_code(405);
-    die("Method not allowed");
+    echo json_encode(['error' => 'Method Not Allowed']);
+    exit();
 }
 
-// Dapatkan ukuran upload
-$contentLength = (int)$_SERVER['CONTENT_LENGTH'];
-$maxSize = 10 * 1024 * 1024; // 10MB max
-
-if ($contentLength > $maxSize) {
-    http_response_code(413);
-    die("File too large");
-}
-
-// Baca input (kita tidak menyimpan, hanya mengukur)
+// Baca input
 $data = file_get_contents('php://input');
-if ($data === false) {
-    http_response_code(400);
-    die("Error reading upload data");
-}
+$size = strlen($data ?? '');
+
+// Simpan hasil (untuk debugging)
+file_put_contents('upload_debug.log', date('Y-m-d H:i:s')." - ".$size." bytes\n", FILE_APPEND);
 
 http_response_code(200);
-echo "Upload received: " . strlen($data) . " bytes";
+echo json_encode([
+    'status' => 'success',
+    'bytes_received' => $size,
+    'timestamp' => microtime(true)
+]);
 ?>
