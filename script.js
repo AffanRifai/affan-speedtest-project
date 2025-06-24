@@ -12,25 +12,62 @@ let info = {
 
 // Muat info ISP, IP, dan server terbaik otomatis saat halaman dibuka
 async function loadInfo() {
-  document.getElementById("isp").textContent = "🔄 Memuat ISP...";
-  document.getElementById("ip").textContent = "🔄 Memuat IP...";
-  document.getElementById("server").textContent = "🔄 Memuat server...";
+  const elements = {
+    isp: document.getElementById("isp"),
+    ip: document.getElementById("ip"),
+    server: document.getElementById("server")
+  };
+
+  // Set loading state
+  elements.isp.textContent = "🔄 Memuat ISP...";
+  elements.ip.textContent = "🔄 Memuat IP...";
+  elements.server.textContent = "🔄 Memuat server...";
 
   try {
     const res = await fetch("get_info.php");
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    
     const data = await res.json();
+    
+    // Update info object
+    info.isp = data.isp || "ISP tidak diketahui";
+    info.ip = data.client_ip || "IP tidak diketahui";
+    info.server = data.server_name 
+      ? `${data.server_name} (${data.server_ip}) - ${data.server_location}`
+      : "Server tidak diketahui";
 
-    info.isp = data.isp;
-    info.ip = data.client_ip;
-    info.server = `${data.server_name} (${data.server_ip}) – ${data.server_location}`;
-
-    document.getElementById("isp").textContent = info.isp;
-    document.getElementById("ip").textContent = info.ip;
-    document.getElementById("server").textContent = info.server;
-  } catch {
-    document.getElementById("isp").textContent = "Gagal memuat ISP";
-    document.getElementById("ip").textContent = "Gagal memuat IP";
-    document.getElementById("server").textContent = "Gagal memuat server";
+    // Update UI
+    elements.isp.textContent = info.isp;
+    elements.ip.textContent = info.ip;
+    elements.server.textContent = info.server;
+    
+  } catch (error) {
+    console.error("Gagal memuat info:", error);
+    elements.isp.textContent = "Gagal memuat ISP";
+    elements.ip.textContent = "Gagal memuat IP";
+    elements.server.textContent = "Gagal memuat server";
+    
+    // Coba gunakan IP dari browser sebagai fallback
+    try {
+      const ice = await new Promise((resolve, reject) => {
+        const pc = new RTCPeerConnection({iceServers: []});
+        pc.createDataChannel("");
+        pc.createOffer().then(offer => pc.setLocalDescription(offer));
+        pc.onicecandidate = ice => {
+          if (!ice.candidate) return;
+          const ip = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(ice.candidate.candidate)?.[1];
+          if (ip) {
+            pc.onicecandidate = null;
+            pc.close();
+            resolve(ip);
+          }
+        };
+        setTimeout(() => reject("Timeout"), 1000);
+      });
+      elements.ip.textContent = ice || "IP tidak terdeteksi";
+    } catch (e) {
+      elements.ip.textContent = "IP tidak terdeteksi";
+    }
   }
 }
 
@@ -108,50 +145,46 @@ async function runPingTest() {
 }
 
 async function runDownloadTest() {
-  const duration = 10000;
-  const startTime = Date.now();
-  let totalBytes = 0;
+  try {
+    const duration = 10000; // 10 detik
+    const startTime = Date.now();
+    let totalBytes = 0;
+    let testUrl = `files/dummy_5mb.dat?rand=${Date.now()}`; // Gunakan timestamp untuk cache busting
 
-  while (Date.now() - startTime < duration) {
-    const urls = Array.from({ length: 4 }, () => `files/dummy_5mb.dat?rand=${Math.random()}`);
-    const promises = urls.map(async url => {
+    // Test koneksi file dummy terlebih dahulu
+    const testRes = await fetch(testUrl, { method: 'HEAD' });
+    if (!testRes.ok) {
+      throw new Error('File dummy tidak ditemukan');
+    }
+
+    while (Date.now() - startTime < duration) {
       const t0 = performance.now();
-      const res = await fetch(url);
+      const res = await fetch(testUrl);
       const blob = await res.blob();
       const t1 = performance.now();
 
       const sizeBytes = blob.size;
+      if (sizeBytes === 0) {
+        throw new Error('File dummy kosong');
+      }
+
       const timeSec = (t1 - t0) / 1000;
       const speedMbps = (sizeBytes * 8) / (timeSec * 1024 * 1024);
 
       totalBytes += sizeBytes;
       updateLiveSpeed(speedMbps);
       renderChart(speedMbps);
-    });
 
-    await Promise.all(promises);
-  }
-
-  const totalTime = (Date.now() - startTime) / 1000;
-  const finalSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
-  return finalSpeed.toFixed(2);
-
-  // Di fungsi runPingTest, runDownloadTest, dan runUploadTest tambahkan try-catch:
-
-  async function runPingTest() {
-    try {
-      let totalPing = 0;
-      for (let i = 0; i < 3; i++) {
-        const start = performance.now();
-        const response = await fetch("ping.php?" + Math.random());
-        if (!response.ok) throw new Error("Ping test failed");
-        totalPing += performance.now() - start;
-      }
-      return (totalPing / 3).toFixed(2);
-    } catch (error) {
-      console.error("Ping error:", error);
-      return "0"; // Return nilai default jika error
+      // Buat URL baru untuk menghindari cache
+      testUrl = `files/dummy_5mb.dat?rand=${Date.now()}`;
     }
+
+    const totalTime = (Date.now() - startTime) / 1000;
+    const finalSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
+    return finalSpeed.toFixed(2);
+  } catch (error) {
+    console.error('Download test error:', error);
+    return "0.00"; // Return 0 jika error
   }
 }
 
