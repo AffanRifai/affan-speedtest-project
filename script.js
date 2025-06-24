@@ -244,11 +244,9 @@ async function runUploadTest() {
 // Ganti fungsi renderChart dengan ini:
 function renderChart(value) {
   if (chart) chart.destroy();
-
+  
   const ctx = document.getElementById("chart").getContext("2d");
-  const maxSpeed = 100; // Maksimum speedometer (misal 100 Mbps)
-
-  // Normalisasi nilai agar tidak melebihi maxSpeed
+  const maxSpeed = 100; // Maksimum speedometer (100 Mbps)
   const normalizedValue = Math.min(value, maxSpeed);
 
   chart = new Chart(ctx, {
@@ -272,7 +270,16 @@ function renderChart(value) {
       },
       animation: {
         animateScale: true,
-        animateRotate: true
+        animateRotate: true,
+        duration: 1000, // Durasi animasi lebih lambat
+        easing: 'easeOutQuart' // Efek easing yang lebih smooth
+      },
+      // Ini yang akan membuat kedua bagian animasi
+      transitions: {
+        animate: {
+          duration: 1000,
+          easing: 'easeOutQuart'
+        }
       }
     }
   });
@@ -280,14 +287,20 @@ function renderChart(value) {
 
 // Update juga fungsi updateLiveSpeed untuk sinkronisasi:
 function updateLiveSpeed(speed) {
-  const maxSpeed = 100; // Harus sama dengan di renderChart
+  const maxSpeed = 100;
   const normalizedSpeed = Math.min(speed, maxSpeed);
   liveSpeed.textContent = normalizedSpeed.toFixed(2) + " Mbps";
-
-  // Update chart jika sudah ada
+  
   if (chart) {
+    // Animasikan kedua bagian secara bersamaan
     chart.data.datasets[0].data = [normalizedSpeed, maxSpeed - normalizedSpeed];
-    chart.update();
+    
+    // Gunakan update() dengan konfigurasi animasi
+    chart.update({
+      duration: 800,
+      easing: 'easeOutQuart',
+      lazy: false
+    });
   }
 }
 
