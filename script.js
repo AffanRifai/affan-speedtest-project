@@ -198,47 +198,70 @@ async function runDownloadTest() {
 
 async function runUploadTest() {
   try {
-    const duration = 10000; // 10 detik
+    const duration = 10000; // 10 detik test
     const startTime = Date.now();
     let totalBytes = 0;
-
-    // Data acak 1MB untuk upload
-    const dataSize = 1 * 1024 * 1024; // 1MB
-    const data = new Uint8Array(dataSize);
-
+    
+    // Buat data acak 2MB untuk dikirim
+    const chunkSize = 2 * 1024 * 1024; // 2MB
+    const chunk = new Uint8Array(chunkSize);
+    
+    // Inisialisasi chart
+    renderChart(0, 'upload');
+    
     while (Date.now() - startTime < duration) {
       const t0 = performance.now();
-      const res = await fetch("upload.php", {
-        method: "POST",
-        body: data,
-        headers: {
-          'Content-Type': 'application/octet-stream'
+      
+      try {
+        const response = await fetch("upload.php", {
+          method: "POST",
+          body: chunk,
+          headers: {
+            'Content-Type': 'application/octet-stream'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      });
-
-      if (!res.ok) {
-        throw new Error('Upload gagal');
+        
+        const result = await response.json();
+        const t1 = performance.now();
+        
+        // Hitung kecepatan
+        const timeSec = (t1 - t0) / 1000;
+        const speedMbps = (result.bytes_received * 8) / (timeSec * 1024 * 1024);
+        
+        totalBytes += result.bytes_received;
+        updateLiveSpeed(speedMbps);
+        renderChart(speedMbps, 'upload');
+        
+      } catch (error) {
+        console.error('Upload chunk error:', error);
+        // Lanjutkan test meskipun ada error pada chunk tertentu
+        continue;
       }
-
-      const result = await res.json();
-      const t1 = performance.now();
-
-      const sizeBytes = result.bytes_received || dataSize;
-      const timeSec = (t1 - t0) / 1000;
-      const speedMbps = (sizeBytes * 8) / (timeSec * 1024 * 1024);
-
-      totalBytes += sizeBytes;
-      updateLiveSpeed(speedMbps);
-      renderChart(speedMbps, 'upload');
     }
-
+    
+    // Hitung kecepatan rata-rata
     const totalTime = (Date.now() - startTime) / 1000;
-    const finalSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
-    return finalSpeed.toFixed(2);
+    const avgSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
+    
+    return avgSpeed.toFixed(2);
+    
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Upload test failed:', error);
     return "0.00";
   }
+}
+
+// Tambahkan di script.js
+function generateRandomData(size) {
+  const data = new Uint8Array(size);
+  for (let i = 0; i < size; i++) {
+    data[i] = Math.floor(Math.random() * 256);
+  }
+  return data;
 }
 
 // Render chart speedometer
