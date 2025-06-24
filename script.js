@@ -87,6 +87,24 @@ async function runPingTest() {
     totalPing += performance.now() - start;
   }
   return (totalPing / 3).toFixed(2);
+
+  // Di fungsi runPingTest, runDownloadTest, dan runUploadTest tambahkan try-catch:
+
+  async function runPingTest() {
+    try {
+      let totalPing = 0;
+      for (let i = 0; i < 3; i++) {
+        const start = performance.now();
+        const response = await fetch("ping.php?" + Math.random());
+        if (!response.ok) throw new Error("Ping test failed");
+        totalPing += performance.now() - start;
+      }
+      return (totalPing / 3).toFixed(2);
+    } catch (error) {
+      console.error("Ping error:", error);
+      return "0"; // Return nilai default jika error
+    }
+  }
 }
 
 async function runDownloadTest() {
@@ -117,6 +135,24 @@ async function runDownloadTest() {
   const totalTime = (Date.now() - startTime) / 1000;
   const finalSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
   return finalSpeed.toFixed(2);
+
+  // Di fungsi runPingTest, runDownloadTest, dan runUploadTest tambahkan try-catch:
+
+  async function runPingTest() {
+    try {
+      let totalPing = 0;
+      for (let i = 0; i < 3; i++) {
+        const start = performance.now();
+        const response = await fetch("ping.php?" + Math.random());
+        if (!response.ok) throw new Error("Ping test failed");
+        totalPing += performance.now() - start;
+      }
+      return (totalPing / 3).toFixed(2);
+    } catch (error) {
+      console.error("Ping error:", error);
+      return "0"; // Return nilai default jika error
+    }
+  }
 }
 
 async function runUploadTest() {
@@ -145,8 +181,27 @@ async function runUploadTest() {
   const totalTime = (Date.now() - startTime) / 1000;
   const finalSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
   return finalSpeed.toFixed(2);
+
+  // Di fungsi runPingTest, runDownloadTest, dan runUploadTest tambahkan try-catch:
+
+  async function runPingTest() {
+    try {
+      let totalPing = 0;
+      for (let i = 0; i < 3; i++) {
+        const start = performance.now();
+        const response = await fetch("ping.php?" + Math.random());
+        if (!response.ok) throw new Error("Ping test failed");
+        totalPing += performance.now() - start;
+      }
+      return (totalPing / 3).toFixed(2);
+    } catch (error) {
+      console.error("Ping error:", error);
+      return "0"; // Return nilai default jika error
+    }
+  }
 }
 
+// Render chart speedometer
 function renderChart(value) {
   if (chart) chart.destroy();
   const ctx = document.getElementById("chart").getContext("2d");
@@ -161,8 +216,10 @@ function renderChart(value) {
       }]
     },
     options: {
-      rotation: -90 * (Math.PI / 180),
-      circumference: 180 * (Math.PI / 180),
+      responsive: true,
+      maintainAspectRatio: false, // penting untuk proporsional
+      rotation: -90,
+      circumference: 180,
       cutout: '80%',
       plugins: {
         legend: { display: false },
