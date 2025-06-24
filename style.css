@@ -1,0 +1,22 @@
+body {
+  font-family: sans-serif;
+  text-align: center;
+  padding: 20px;
+  background: #f7f7f7;
+}
+
+h1 {
+  margin-bottom: 10px;
+}
+
+button {
+  padding: 10px 20px;
+  margin: 15px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#results {
+  margin: 20px 0;
+  font-size: 18px;
+}

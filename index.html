@@ -2,16 +2,32 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Speed Test</title>
+  <title>Speedtest Sederhana</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
 <body>
-  <h1>Internet Speed Test</h1>
-  <button onclick="startTest()">Mulai Tes</button>
-  <p id="download"></p>
-  <p id="upload"></p>
-  <p id="ping"></p>
+  <h1>Speed Test</h1>
 
+  <label for="fileSize">Ukuran file tes:</label>
+  <select id="fileSize">
+    <option value="5">5MB</option>
+    <option value="10" selected>10MB</option>
+    <option value="20">20MB</option>
+  </select>
+
+  <button onclick="startTest()">Mulai Tes</button>
+
+  <div id="results">
+    <p id="download">Download: -</p>
+    <p id="upload">Upload: -</p>
+    <p id="ping">Ping: -</p>
+  </div>
+
+  <canvas id="speedChart" width="400" height="200"></canvas>
+
+  <script src="chart.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
