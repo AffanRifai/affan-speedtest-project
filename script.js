@@ -40,7 +40,6 @@ window.onload = function () {
   updateStats();
 };
 
-// Fungsi utama saat tombol GO ditekan
 async function startTest() {
   document.getElementById("goBtn").style.display = "none";
   document.getElementById("liveSpeed").style.display = "block";
@@ -76,10 +75,10 @@ async function startTest() {
       server: info.server
     })
   });
+
   document.getElementById("goBtn").style.display = "block";
 }
 
-// Pengujian Ping
 async function runPingTest() {
   let totalPing = 0;
   for (let i = 0; i < 3; i++) {
@@ -90,31 +89,29 @@ async function runPingTest() {
   return (totalPing / 3).toFixed(2);
 }
 
-// Pengujian Download realtime
 async function runDownloadTest() {
-  const duration = 10000; // 10 detik
+  const duration = 10000;
   const startTime = Date.now();
   let totalBytes = 0;
 
-  const fetchChunk = async () => {
-    const res = await fetch(`files/dummy_10mb.dat?rand=${Math.random()}`, { cache: "no-store" });
-    const blob = await res.blob();
-    return blob.size;
-  };
-
   while (Date.now() - startTime < duration) {
-    const promises = [];
-    for (let i = 0; i < 3; i++) {
-      promises.push(fetchChunk());
-    }
-    const sizes = await Promise.all(promises);
-    const batchSize = sizes.reduce((a, b) => a + b, 0);
-    totalBytes += batchSize;
+    const urls = Array.from({ length: 4 }, () => `files/dummy_5mb.dat?rand=${Math.random()}`);
+    const promises = urls.map(async url => {
+      const t0 = performance.now();
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const t1 = performance.now();
 
-    const elapsed = (Date.now() - startTime) / 1000;
-    const speedMbps = (totalBytes * 8) / (elapsed * 1024 * 1024);
-    updateLiveSpeed(speedMbps);
-    renderChart(speedMbps);
+      const sizeBytes = blob.size;
+      const timeSec = (t1 - t0) / 1000;
+      const speedMbps = (sizeBytes * 8) / (timeSec * 1024 * 1024);
+
+      totalBytes += sizeBytes;
+      updateLiveSpeed(speedMbps);
+      renderChart(speedMbps);
+    });
+
+    await Promise.all(promises);
   }
 
   const totalTime = (Date.now() - startTime) / 1000;
@@ -122,33 +119,25 @@ async function runDownloadTest() {
   return finalSpeed.toFixed(2);
 }
 
-
-// Pengujian Upload realtime
 async function runUploadTest() {
-  const duration = 10000; // 10 detik
+  const duration = 10000;
   const startTime = Date.now();
   let totalBytes = 0;
-  const data = new Uint8Array(5 * 1024 * 1024); // 5MB
+  const data = new Uint8Array(5 * 1024 * 1024);
 
-  const uploadChunk = async () => {
-    const res = await fetch("upload.php", {
+  while (Date.now() - startTime < duration) {
+    const t0 = performance.now();
+    await fetch("upload.php", {
       method: "POST",
       body: data
     });
-    return data.length;
-  };
+    const t1 = performance.now();
 
-  while (Date.now() - startTime < duration) {
-    const promises = [];
-    for (let i = 0; i < 2; i++) {
-      promises.push(uploadChunk());
-    }
-    const sizes = await Promise.all(promises);
-    const batchSize = sizes.reduce((a, b) => a + b, 0);
-    totalBytes += batchSize;
+    const sizeBytes = data.length;
+    const timeSec = (t1 - t0) / 1000;
+    const speedMbps = (sizeBytes * 8) / (timeSec * 1024 * 1024);
 
-    const elapsed = (Date.now() - startTime) / 1000;
-    const speedMbps = (totalBytes * 8) / (elapsed * 1024 * 1024);
+    totalBytes += sizeBytes;
     updateLiveSpeed(speedMbps);
     renderChart(speedMbps);
   }
@@ -158,8 +147,6 @@ async function runUploadTest() {
   return finalSpeed.toFixed(2);
 }
 
-
-// Render chart speedometer
 function renderChart(value) {
   if (chart) chart.destroy();
   const ctx = document.getElementById("chart").getContext("2d");
@@ -174,10 +161,8 @@ function renderChart(value) {
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false, // penting untuk proporsional
-      rotation: -90,
-      circumference: 180,
+      rotation: -90 * (Math.PI / 180),
+      circumference: 180 * (Math.PI / 180),
       cutout: '80%',
       plugins: {
         legend: { display: false },
@@ -185,18 +170,12 @@ function renderChart(value) {
       }
     }
   });
-
-
-
 }
 
-
-// Update angka live di luar speedometer
 function updateLiveSpeed(speed) {
   liveSpeed.textContent = speed.toFixed(2) + " Mbps";
 }
 
-// Simpan ke localStorage
 function saveToHistory(result) {
   const history = JSON.parse(localStorage.getItem("speedHistory") || "[]");
   history.push(result);
@@ -206,6 +185,7 @@ function saveToHistory(result) {
 function updateHistoryTable() {
   const history = JSON.parse(localStorage.getItem("speedHistory") || "[]");
   const tbody = document.querySelector("#historyContent tbody");
+  if (!tbody) return;
   tbody.innerHTML = "";
   history.slice(-10).reverse().forEach(row => {
     const tr = document.createElement("tr");
@@ -219,7 +199,10 @@ function updateStats() {
   if (history.length === 0) return;
 
   const avg = (key) => (history.reduce((a, b) => a + parseFloat(b[key]), 0) / history.length).toFixed(2);
-  document.getElementById("statsContent").innerHTML = `
+  const statsBox = document.getElementById("statsContent");
+  if (!statsBox) return;
+
+  statsBox.innerHTML = `
     <p>Rata-rata Ping: ${avg("ping")} ms</p>
     <p>Rata-rata Download: ${avg("download")} Mbps</p>
     <p>Rata-rata Upload: ${avg("upload")} Mbps</p>
