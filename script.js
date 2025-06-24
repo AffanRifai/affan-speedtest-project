@@ -201,54 +201,43 @@ async function runUploadTest() {
     const duration = 10000; // 10 detik test
     const startTime = Date.now();
     let totalBytes = 0;
-    
+
     // Buat data acak 2MB untuk dikirim
     const chunkSize = 2 * 1024 * 1024; // 2MB
     const chunk = new Uint8Array(chunkSize);
-    
+
     // Inisialisasi chart
     renderChart(0, 'upload');
-    
+
     while (Date.now() - startTime < duration) {
       const t0 = performance.now();
-      
+
       try {
         const response = await fetch("upload.php", {
           method: "POST",
-          body: chunk,
+          body: new Blob([new Uint8Array(1024 * 1024)]), // 1MB data
           headers: {
             'Content-Type': 'application/octet-stream'
           }
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const result = await response.json();
-        const t1 = performance.now();
-        
-        // Hitung kecepatan
-        const timeSec = (t1 - t0) / 1000;
-        const speedMbps = (result.bytes_received * 8) / (timeSec * 1024 * 1024);
-        
-        totalBytes += result.bytes_received;
-        updateLiveSpeed(speedMbps);
-        renderChart(speedMbps, 'upload');
-        
+
+        return await response.json();
       } catch (error) {
-        console.error('Upload chunk error:', error);
-        // Lanjutkan test meskipun ada error pada chunk tertentu
-        continue;
+        console.error('Upload error:', error);
+        throw error;
       }
     }
-    
+
     // Hitung kecepatan rata-rata
     const totalTime = (Date.now() - startTime) / 1000;
     const avgSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
-    
+
     return avgSpeed.toFixed(2);
-    
+
   } catch (error) {
     console.error('Upload test failed:', error);
     return "0.00";
