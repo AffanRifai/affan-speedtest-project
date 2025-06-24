@@ -16,7 +16,7 @@ function getFallbackInfo() {
         'isp' => 'ISP tidak diketahui',
         'server_name' => 'Server Lokal',
         'server_location' => 'Lokasi tidak diketahui',
-        'server_ip' => gethostbyname(gethostname())
+        'server_ip' => @gethostbyname(gethostname()) ?: 'IP server tidak diketahui'
     ];
 }
 

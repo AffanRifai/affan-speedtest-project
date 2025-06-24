@@ -93,7 +93,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   padding: 10px 25px;
-  background: pink;
+  background: purple;
   color: white;
   border-radius: 25px;
   cursor: pointer;

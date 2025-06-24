@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] != 'POST') {
 
 // Baca input
 $data = file_get_contents('php://input');
-$size = strlen($data);
+$size = strlen($data ?? '');
 
 // Simpan hasil (untuk debugging)
 file_put_contents('upload_debug.log', date('Y-m-d H:i:s')." - ".$size." bytes\n", FILE_APPEND);

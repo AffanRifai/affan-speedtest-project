@@ -124,30 +124,18 @@ async function startTest() {
 }
 
 async function runPingTest() {
-  let totalPing = 0;
-  for (let i = 0; i < 3; i++) {
-    const start = performance.now();
-    await fetch("ping.php?" + Math.random());
-    totalPing += performance.now() - start;
-  }
-  return (totalPing / 3).toFixed(2);
-
-  // Di fungsi runPingTest, runDownloadTest, dan runUploadTest tambahkan try-catch:
-
-  async function runPingTest() {
-    try {
-      let totalPing = 0;
-      for (let i = 0; i < 3; i++) {
-        const start = performance.now();
-        const response = await fetch("ping.php?" + Math.random());
-        if (!response.ok) throw new Error("Ping test failed");
-        totalPing += performance.now() - start;
-      }
-      return (totalPing / 3).toFixed(2);
-    } catch (error) {
-      console.error("Ping error:", error);
-      return "0"; // Return nilai default jika error
+  try {
+    let totalPing = 0;
+    for (let i = 0; i < 3; i++) {
+      const start = performance.now();
+      const response = await fetch("ping.php?" + Math.random());
+      if (!response.ok) throw new Error("Ping test failed");
+      totalPing += performance.now() - start;
     }
+    return (totalPing / 3).toFixed(2);
+  } catch (error) {
+    console.error("Ping error:", error);
+    return "0"; // Return nilai default jika error
   }
 }
 
@@ -215,7 +203,7 @@ async function runUploadTest() {
       try {
         const response = await fetch("upload.php", {
           method: "POST",
-          body: new Blob([new Uint8Array(1024 * 1024)]), // 1MB data
+          body: new Blob([chunk]), // 2MB data
           headers: {
             'Content-Type': 'application/octet-stream'
           }
@@ -225,10 +213,18 @@ async function runUploadTest() {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        return await response.json();
+        // Tambahkan jumlah byte yang diupload
+        totalBytes += chunkSize;
+
+        const t1 = performance.now();
+        const timeSec = (t1 - t0) / 1000;
+        const speedMbps = (chunkSize * 8) / (timeSec * 1024 * 1024);
+
+        updateLiveSpeed(speedMbps, 'upload');
+        renderChart(speedMbps, 'upload');
       } catch (error) {
         console.error('Upload error:', error);
-        throw error;
+        // Lanjutkan ke iterasi berikutnya jika error
       }
     }
 
