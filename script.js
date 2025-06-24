@@ -151,28 +151,29 @@ async function runPingTest() {
   }
 }
 
-let currentMode = 'download';
+
 
 async function runDownloadTest() {
   try {
     const duration = 10000; // 10 detik
     const startTime = Date.now();
     let totalBytes = 0;
+    let testUrl = `files/dummy_5mb.dat?rand=${Date.now()}`; // Gunakan timestamp untuk cache busting
 
-    // URL file dummy dengan cache busting
-    const dummyFile = `files/dummy_5mb.dat?rand=${Date.now()}`;
-
-    // Test koneksi terlebih dahulu
-    const testRes = await fetch(dummyFile, { method: 'HEAD' });
+    // Test koneksi file dummy terlebih dahulu
+    const testRes = await fetch(testUrl, { method: 'HEAD' });
     if (!testRes.ok) {
       throw new Error('File dummy tidak ditemukan');
     }
 
     while (Date.now() - startTime < duration) {
       const t0 = performance.now();
-      const res = await fetch(dummyFile);
+      const res = await fetch(testUrl);
       const blob = await res.blob();
       const t1 = performance.now();
+
+      updateLiveSpeed(speedMbps, 'download');
+      renderChart(speedMbps, 'download');
 
       const sizeBytes = blob.size;
       if (sizeBytes === 0) {
@@ -184,60 +185,68 @@ async function runDownloadTest() {
 
       totalBytes += sizeBytes;
       updateLiveSpeed(speedMbps);
-      renderChart(speedMbps, 'download');
+      renderChart(speedMbps);
+
+      // Buat URL baru untuk menghindari cache
+      testUrl = `files/dummy_5mb.dat?rand=${Date.now()}`;
     }
 
     const totalTime = (Date.now() - startTime) / 1000;
     const finalSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
     return finalSpeed.toFixed(2);
   } catch (error) {
-    console.error('Download error:', error);
-    return "0.00";
+    console.error('Download test error:', error);
+    return "0.00"; // Return 0 jika error
   }
 }
 
 async function runUploadTest() {
-  try {
-    const duration = 10000; // 10 detik
-    const startTime = Date.now();
-    let totalBytes = 0;
+  const duration = 10000;
+  const startTime = Date.now();
+  let totalBytes = 0;
+  const data = new Uint8Array(5 * 1024 * 1024);
 
-    // Data acak 1MB untuk upload
-    const dataSize = 1 * 1024 * 1024; // 1MB
-    const data = new Uint8Array(dataSize);
+  while (Date.now() - startTime < duration) {
+    const t0 = performance.now();
+    await fetch("upload.php", {
+      method: "POST",
+      body: data
+    });
 
-    while (Date.now() - startTime < duration) {
-      const t0 = performance.now();
-      const res = await fetch("upload.php", {
-        method: "POST",
-        body: data,
-        headers: {
-          'Content-Type': 'application/octet-stream'
-        }
-      });
+updateLiveSpeed(speedMbps, 'upload');
+    renderChart(speedMbps, 'upload');
 
-      if (!res.ok) {
-        throw new Error('Upload gagal');
+    const t1 = performance.now();
+
+    const sizeBytes = data.length;
+    const timeSec = (t1 - t0) / 1000;
+    const speedMbps = (sizeBytes * 8) / (timeSec * 1024 * 1024);
+
+    totalBytes += sizeBytes;
+    updateLiveSpeed(speedMbps);
+    renderChart(speedMbps);
+  }
+
+  const totalTime = (Date.now() - startTime) / 1000;
+  const finalSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
+  return finalSpeed.toFixed(2);
+
+  // Di fungsi runPingTest, runDownloadTest, dan runUploadTest tambahkan try-catch:
+
+  async function runPingTest() {
+    try {
+      let totalPing = 0;
+      for (let i = 0; i < 3; i++) {
+        const start = performance.now();
+        const response = await fetch("ping.php?" + Math.random());
+        if (!response.ok) throw new Error("Ping test failed");
+        totalPing += performance.now() - start;
       }
-
-      const result = await res.json();
-      const t1 = performance.now();
-
-      const sizeBytes = result.bytes_received || dataSize;
-      const timeSec = (t1 - t0) / 1000;
-      const speedMbps = (sizeBytes * 8) / (timeSec * 1024 * 1024);
-
-      totalBytes += sizeBytes;
-      updateLiveSpeed(speedMbps);
-      renderChart(speedMbps, 'upload');
+      return (totalPing / 3).toFixed(2);
+    } catch (error) {
+      console.error("Ping error:", error);
+      return "0"; // Return nilai default jika error
     }
-
-    const totalTime = (Date.now() - startTime) / 1000;
-    const finalSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
-    return finalSpeed.toFixed(2);
-  } catch (error) {
-    console.error('Upload error:', error);
-    return "0.00";
   }
 }
 

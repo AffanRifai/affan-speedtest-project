@@ -1,28 +1,24 @@
 <?php
-header("Content-Type: text/plain");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST");
+header("Content-Type: application/json");
 
-// Validasi request method
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    die("Method not allowed");
-}
+// Simpan file upload untuk pengukuran
+$input = file_get_contents('php://input');
+$size = strlen($input);
 
-// Dapatkan ukuran upload
-$contentLength = (int)$_SERVER['CONTENT_LENGTH'];
-$maxSize = 10 * 1024 * 1024; // 10MB max
-
-if ($contentLength > $maxSize) {
-    http_response_code(413);
-    die("File too large");
-}
-
-// Baca input (kita tidak menyimpan, hanya mengukur)
-$data = file_get_contents('php://input');
-if ($data === false) {
+if ($size === 0) {
     http_response_code(400);
-    die("Error reading upload data");
+    echo json_encode(["error" => "No data received"]);
+    exit;
 }
+
+// Simpan hasil pengukuran
+file_put_contents('upload_measurement.txt', $size . "\n", FILE_APPEND);
 
 http_response_code(200);
-echo "Upload received: " . strlen($data) . " bytes";
+echo json_encode([
+    "status" => "success",
+    "bytes_received" => $size
+]);
 ?>
