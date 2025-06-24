@@ -1,19 +1,35 @@
 <?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
+
+// Tangani preflight request
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// Pastikan hanya POST yang diterima
+if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => 'Method Not Allowed']);
+    exit();
+}
 
 // Validasi input JSON
 $json = file_get_contents("php://input");
 if ($json === false) {
     http_response_code(400);
     echo json_encode(["error" => "Invalid request"]);
-    exit;
+    exit();
 }
 
 $data = json_decode($json, true);
 if ($data === null) {
     http_response_code(400);
     echo json_encode(["error" => "Invalid JSON"]);
-    exit;
+    exit();
 }
 
 // Validasi parameter
@@ -42,20 +58,11 @@ try {
     }
 
     // Validasi dan sanitasi input
-    $ping = filter_var($data['ping'], FILTER_VALIDATE_FLOAT, ['options' => [
-        'min_range' => 0,
-        'max_range' => 1000
-    ]]) ? $data['ping'] : 0;
+    $ping = filter_var($data['ping'], FILTER_VALIDATE_FLOAT) !== false ? floatval($data['ping']) : 0;
 
-    $download = filter_var($data['download'], FILTER_VALIDATE_FLOAT, ['options' => [
-        'min_range' => 0,
-        'max_range' => 1000
-    ]]) ? $data['download'] : 0;
+    $download = filter_var($data['download'], FILTER_VALIDATE_FLOAT) !== false ? floatval($data['download']) : 0;
 
-    $upload = filter_var($data['upload'], FILTER_VALIDATE_FLOAT, ['options' => [
-        'min_range' => 0,
-        'max_range' => 1000
-    ]]) ? $data['upload'] : 0;
+    $upload = filter_var($data['upload'], FILTER_VALIDATE_FLOAT) !== false ? floatval($data['upload']) : 0;
 
     $ip = $conn->real_escape_string(substr($data['ip'], 0, 45));
     $isp = $conn->real_escape_string(substr($data['isp'], 0, 255));

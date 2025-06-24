@@ -1,5 +1,5 @@
 let chart;
-let currentMode = 'download';
+
 const pingSpan = document.getElementById("ping");
 const downloadSpan = document.getElementById("download");
 const uploadSpan = document.getElementById("upload");
@@ -124,54 +124,43 @@ async function startTest() {
 }
 
 async function runPingTest() {
-  let totalPing = 0;
-  for (let i = 0; i < 3; i++) {
-    const start = performance.now();
-    await fetch("ping.php?" + Math.random());
-    totalPing += performance.now() - start;
-  }
-  return (totalPing / 3).toFixed(2);
-
-  // Di fungsi runPingTest, runDownloadTest, dan runUploadTest tambahkan try-catch:
-
-  async function runPingTest() {
-    try {
-      let totalPing = 0;
-      for (let i = 0; i < 3; i++) {
-        const start = performance.now();
-        const response = await fetch("ping.php?" + Math.random());
-        if (!response.ok) throw new Error("Ping test failed");
-        totalPing += performance.now() - start;
-      }
-      return (totalPing / 3).toFixed(2);
-    } catch (error) {
-      console.error("Ping error:", error);
-      return "0"; // Return nilai default jika error
+  try {
+    let totalPing = 0;
+    for (let i = 0; i < 3; i++) {
+      const start = performance.now();
+      const response = await fetch("ping.php?" + Math.random());
+      if (!response.ok) throw new Error("Ping test failed");
+      totalPing += performance.now() - start;
     }
+    return (totalPing / 3).toFixed(2);
+  } catch (error) {
+    console.error("Ping error:", error);
+    return "0"; // Return nilai default jika error
   }
 }
+
+let currentMode = 'download';
 
 async function runDownloadTest() {
   try {
     const duration = 10000; // 10 detik
     const startTime = Date.now();
     let totalBytes = 0;
-    let testUrl = `files/dummy_5mb.dat?rand=${Date.now()}`; // Gunakan timestamp untuk cache busting
 
-    // Test koneksi file dummy terlebih dahulu
-    const testRes = await fetch(testUrl, { method: 'HEAD' });
+    // URL file dummy dengan cache busting
+    const dummyFile = `files/dummy_5mb.dat?rand=${Date.now()}`;
+
+    // Test koneksi terlebih dahulu
+    const testRes = await fetch(dummyFile, { method: 'HEAD' });
     if (!testRes.ok) {
       throw new Error('File dummy tidak ditemukan');
     }
 
     while (Date.now() - startTime < duration) {
       const t0 = performance.now();
-      const res = await fetch(testUrl);
+      const res = await fetch(dummyFile);
       const blob = await res.blob();
       const t1 = performance.now();
-
-      updateLiveSpeed(speedMbps, 'download');
-      renderChart(speedMbps, 'download');
 
       const sizeBytes = blob.size;
       if (sizeBytes === 0) {
@@ -183,69 +172,81 @@ async function runDownloadTest() {
 
       totalBytes += sizeBytes;
       updateLiveSpeed(speedMbps);
-      renderChart(speedMbps);
-
-      // Buat URL baru untuk menghindari cache
-      testUrl = `files/dummy_5mb.dat?rand=${Date.now()}`;
+      renderChart(speedMbps, 'download');
     }
 
     const totalTime = (Date.now() - startTime) / 1000;
     const finalSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
     return finalSpeed.toFixed(2);
   } catch (error) {
-    console.error('Download test error:', error);
-    return "0.00"; // Return 0 jika error
+    console.error('Download error:', error);
+    return "0.00";
   }
 }
 
 async function runUploadTest() {
-  const duration = 10000;
-  const startTime = Date.now();
-  let totalBytes = 0;
-  const data = new Uint8Array(5 * 1024 * 1024);
+  try {
+    const duration = 10000; // 10 detik test
+    const startTime = Date.now();
+    let totalBytes = 0;
 
-  while (Date.now() - startTime < duration) {
-    const t0 = performance.now();
-    await fetch("upload.php", {
-      method: "POST",
-      body: data
-    });
+    // Buat data acak 2MB untuk dikirim
+    const chunkSize = 2 * 1024 * 1024; // 2MB
+    const chunk = new Uint8Array(chunkSize);
 
-    updateLiveSpeed(speedMbps, 'upload');
-    renderChart(speedMbps, 'upload');
+    // Inisialisasi chart
+    renderChart(0, 'upload');
 
-    const t1 = performance.now();
+    while (Date.now() - startTime < duration) {
+      const t0 = performance.now();
 
-    const sizeBytes = data.length;
-    const timeSec = (t1 - t0) / 1000;
-    const speedMbps = (sizeBytes * 8) / (timeSec * 1024 * 1024);
+      try {
+        const response = await fetch("upload.php", {
+          method: "POST",
+          body: new Blob([chunk]), // 2MB data
+          headers: {
+            'Content-Type': 'application/octet-stream'
+          }
+        });
 
-    totalBytes += sizeBytes;
-    updateLiveSpeed(speedMbps);
-    renderChart(speedMbps);
-  }
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-  const totalTime = (Date.now() - startTime) / 1000;
-  const finalSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
-  return finalSpeed.toFixed(2);
+        // Tambahkan jumlah byte yang diupload
+        totalBytes += chunkSize;
 
-  // Di fungsi runPingTest, runDownloadTest, dan runUploadTest tambahkan try-catch:
+        const t1 = performance.now();
+        const timeSec = (t1 - t0) / 1000;
+        const speedMbps = (chunkSize * 8) / (timeSec * 1024 * 1024);
 
-  async function runPingTest() {
-    try {
-      let totalPing = 0;
-      for (let i = 0; i < 3; i++) {
-        const start = performance.now();
-        const response = await fetch("ping.php?" + Math.random());
-        if (!response.ok) throw new Error("Ping test failed");
-        totalPing += performance.now() - start;
+        updateLiveSpeed(speedMbps, 'upload');
+        renderChart(speedMbps, 'upload');
+      } catch (error) {
+        console.error('Upload error:', error);
+        // Lanjutkan ke iterasi berikutnya jika error
       }
-      return (totalPing / 3).toFixed(2);
-    } catch (error) {
-      console.error("Ping error:", error);
-      return "0"; // Return nilai default jika error
     }
+
+    // Hitung kecepatan rata-rata
+    const totalTime = (Date.now() - startTime) / 1000;
+    const avgSpeed = (totalBytes * 8) / (totalTime * 1024 * 1024);
+
+    return avgSpeed.toFixed(2);
+
+  } catch (error) {
+    console.error('Upload test failed:', error);
+    return "0.00";
   }
+}
+
+// Tambahkan di script.js
+function generateRandomData(size) {
+  const data = new Uint8Array(size);
+  for (let i = 0; i < size; i++) {
+    data[i] = Math.floor(Math.random() * 256);
+  }
+  return data;
 }
 
 // Render chart speedometer
@@ -315,13 +316,6 @@ function updateLiveSpeed(speed, mode) {
     chart.data.datasets[0].data = [normalizedSpeed, maxSpeed - normalizedSpeed];
     chart.update();
   }
-
-  if (mode !== currentMode) {
-    chart.options.animation = { duration: 300 };
-  } else {
-    chart.options.animation = false;
-  }
-  chart.update();
 }
 
 function saveToHistory(result) {
