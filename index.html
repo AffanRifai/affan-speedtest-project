@@ -1,17 +1,49 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Speed Test</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Speedtest Clone</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
-  <h1>Internet Speed Test</h1>
-  <button onclick="startTest()">Mulai Tes</button>
-  <p id="download"></p>
-  <p id="upload"></p>
-  <p id="ping"></p>
+  <div class="container">
+    <div class="top-bar">
+      <div class="mode">⬇ UNDUHAN Mbps</div>
+      <div class="mode">⬆ UNGGAHAN Mbps</div>
+    </div>
+
+    <div class="status-area">
+      <div class="stat">
+        <label>Ping</label>
+        <span id="ping">–</span> ms
+      </div>
+      <div class="stat">
+        <label>Download</label>
+        <span id="download">–</span> Mbps
+      </div>
+      <div class="stat">
+        <label>Upload</label>
+        <span id="upload">–</span> Mbps
+      </div>
+    </div>
+
+    <div class="speedometer">
+      <canvas id="chart"></canvas>
+      <div id="liveSpeed" class="speed-value">0.00 Mbps</div>
+      <div class="go-button" id="goBtn" onclick="startTest()">GO</div>
+    </div>
+
+    <div class="info">
+      <div><strong id="isp">Memuat ISP...</strong></div>
+      <div id="ip">Memuat IP...</div>
+      <div id="server">Memuat server...</div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
+
 </html>
