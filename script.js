@@ -1,4 +1,5 @@
 let chart;
+let currentMode = 'download';
 const pingSpan = document.getElementById("ping");
 const downloadSpan = document.getElementById("download");
 const uploadSpan = document.getElementById("upload");
@@ -169,6 +170,9 @@ async function runDownloadTest() {
       const blob = await res.blob();
       const t1 = performance.now();
 
+      updateLiveSpeed(speedMbps, 'download');
+      renderChart(speedMbps, 'download');
+
       const sizeBytes = blob.size;
       if (sizeBytes === 0) {
         throw new Error('File dummy kosong');
@@ -206,6 +210,10 @@ async function runUploadTest() {
       method: "POST",
       body: data
     });
+
+    updateLiveSpeed(speedMbps, 'upload');
+    renderChart(speedMbps, 'upload');
+
     const t1 = performance.now();
 
     const sizeBytes = data.length;
@@ -242,19 +250,29 @@ async function runUploadTest() {
 
 // Render chart speedometer
 // Ganti fungsi renderChart dengan ini:
-function renderChart(value) {
-  if (chart) chart.destroy();
-  
+function renderChart(value, mode) {
+  if (chart) {
+    // Nonaktifkan animasi saat update nilai
+    chart.options.animation = false;
+    chart.update();
+    chart.destroy();
+  }
+
   const ctx = document.getElementById("chart").getContext("2d");
-  const maxSpeed = 100; // Maksimum speedometer (100 Mbps)
+  const maxSpeed = 100;
   const normalizedValue = Math.min(value, maxSpeed);
+
+  currentMode = mode; // Update mode saat ini
 
   chart = new Chart(ctx, {
     type: 'doughnut',
     data: {
       datasets: [{
         data: [normalizedValue, maxSpeed - normalizedValue],
-        backgroundColor: ['#a855f7', '#1e293b'],
+        backgroundColor: [
+          mode === 'download' ? '#a855f7' : '#3b82f6', // Ungu untuk download, biru untuk upload
+          '#1e293b' // Abu-abu tetap
+        ],
         borderWidth: 0,
       }]
     },
@@ -271,14 +289,11 @@ function renderChart(value) {
       animation: {
         animateScale: true,
         animateRotate: true,
-        duration: 1000, // Durasi animasi lebih lambat
-        easing: 'easeOutQuart' // Efek easing yang lebih smooth
-      },
-      // Ini yang akan membuat kedua bagian animasi
-      transitions: {
-        animate: {
-          duration: 1000,
-          easing: 'easeOutQuart'
+        duration: 1000,
+        easing: 'easeOutQuart',
+        onComplete: () => {
+          // Setel ulang animasi setelah render awal
+          chart.options.animation = false;
         }
       }
     }
@@ -286,22 +301,27 @@ function renderChart(value) {
 }
 
 // Update juga fungsi updateLiveSpeed untuk sinkronisasi:
-function updateLiveSpeed(speed) {
+function updateLiveSpeed(speed, mode) {
   const maxSpeed = 100;
   const normalizedSpeed = Math.min(speed, maxSpeed);
   liveSpeed.textContent = normalizedSpeed.toFixed(2) + " Mbps";
-  
+
   if (chart) {
-    // Animasikan kedua bagian secara bersamaan
+    // Update warna berdasarkan mode
+    chart.data.datasets[0].backgroundColor[0] =
+      mode === 'download' ? '#a855f7' : '#3b82f6';
+
+    // Update data tanpa animasi
     chart.data.datasets[0].data = [normalizedSpeed, maxSpeed - normalizedSpeed];
-    
-    // Gunakan update() dengan konfigurasi animasi
-    chart.update({
-      duration: 800,
-      easing: 'easeOutQuart',
-      lazy: false
-    });
+    chart.update();
   }
+
+  if (mode !== currentMode) {
+    chart.options.animation = { duration: 300 };
+  } else {
+    chart.options.animation = false;
+  }
+  chart.update();
 }
 
 function saveToHistory(result) {

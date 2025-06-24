@@ -93,7 +93,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   padding: 10px 25px;
-  background: #e51e1e;
+  background: #46e51e;
   color: white;
   border-radius: 25px;
   cursor: pointer;
@@ -112,8 +112,7 @@ body {
 }
 
 #chart {
-  transition: all 0.5s ease-out;
-  will-change: transform;
+  transition: background-color 0.3s ease;
 }
 
 
