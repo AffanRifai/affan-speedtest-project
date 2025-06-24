@@ -26,13 +26,13 @@ async function loadInfo() {
   try {
     const res = await fetch("get_info.php");
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    
+
     const data = await res.json();
-    
+
     // Update info object
     info.isp = data.isp || "ISP tidak diketahui";
     info.ip = data.client_ip || "IP tidak diketahui";
-    info.server = data.server_name 
+    info.server = data.server_name
       ? `${data.server_name} (${data.server_ip}) - ${data.server_location}`
       : "Server tidak diketahui";
 
@@ -40,17 +40,17 @@ async function loadInfo() {
     elements.isp.textContent = info.isp;
     elements.ip.textContent = info.ip;
     elements.server.textContent = info.server;
-    
+
   } catch (error) {
     console.error("Gagal memuat info:", error);
     elements.isp.textContent = "Gagal memuat ISP";
     elements.ip.textContent = "Gagal memuat IP";
     elements.server.textContent = "Gagal memuat server";
-    
+
     // Coba gunakan IP dari browser sebagai fallback
     try {
       const ice = await new Promise((resolve, reject) => {
-        const pc = new RTCPeerConnection({iceServers: []});
+        const pc = new RTCPeerConnection({ iceServers: [] });
         pc.createDataChannel("");
         pc.createOffer().then(offer => pc.setLocalDescription(offer));
         pc.onicecandidate = ice => {
@@ -95,6 +95,12 @@ async function startTest() {
   uploadSpan.textContent = upload;
 
   liveSpeed.textContent = "0.00 Mbps";
+
+  // Set max speed berdasarkan hasil download tertinggi
+  const history = JSON.parse(localStorage.getItem("speedHistory") || "[]");
+  const maxDownload = history.reduce((max, item) =>
+    Math.max(max, parseFloat(item.download)), 100); // Default 100 Mbps
+  renderChart(0, maxDownload); // Anda perlu modifikasi renderChart untuk menerima parameter maxSpeed
 
   const waktu = new Date().toLocaleString();
   const result = { waktu, ping, download, upload };
@@ -235,35 +241,54 @@ async function runUploadTest() {
 }
 
 // Render chart speedometer
+// Ganti fungsi renderChart dengan ini:
 function renderChart(value) {
   if (chart) chart.destroy();
+
   const ctx = document.getElementById("chart").getContext("2d");
+  const maxSpeed = 100; // Maksimum speedometer (misal 100 Mbps)
+
+  // Normalisasi nilai agar tidak melebihi maxSpeed
+  const normalizedValue = Math.min(value, maxSpeed);
 
   chart = new Chart(ctx, {
     type: 'doughnut',
     data: {
       datasets: [{
-        data: [value, 1000 - value],
+        data: [normalizedValue, maxSpeed - normalizedValue],
         backgroundColor: ['#a855f7', '#1e293b'],
         borderWidth: 0,
       }]
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false, // penting untuk proporsional
+      maintainAspectRatio: false,
       rotation: -90,
       circumference: 180,
       cutout: '80%',
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false }
+      },
+      animation: {
+        animateScale: true,
+        animateRotate: true
       }
     }
   });
 }
 
+// Update juga fungsi updateLiveSpeed untuk sinkronisasi:
 function updateLiveSpeed(speed) {
-  liveSpeed.textContent = speed.toFixed(2) + " Mbps";
+  const maxSpeed = 100; // Harus sama dengan di renderChart
+  const normalizedSpeed = Math.min(speed, maxSpeed);
+  liveSpeed.textContent = normalizedSpeed.toFixed(2) + " Mbps";
+
+  // Update chart jika sudah ada
+  if (chart) {
+    chart.data.datasets[0].data = [normalizedSpeed, maxSpeed - normalizedSpeed];
+    chart.update();
+  }
 }
 
 function saveToHistory(result) {

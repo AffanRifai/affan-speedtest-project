@@ -30,7 +30,7 @@ body {
 }
 
 .mode {
-  background-color: #ff0000;
+  background-color: #21262d;
   color: #58a6ff;
   padding: 6px 14px;
   font-size: 0.9rem;
@@ -105,6 +105,14 @@ body {
 
 .go-button:hover {
   background: #1565c0;
+}
+
+.speed-value {
+  transition: all 0.3s ease-out;
+}
+
+#chart {
+  transition: all 0.5s ease-in-out;
 }
 
 
